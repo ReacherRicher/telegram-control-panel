@@ -1,0 +1,342 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Managed Telegram Accounts ────────────────────────────────────────────────
+model Account {
+  id           Int      @id @default(autoincrement())
+  slug         String   @unique           // e.g. "john_doe" — used for session file name
+  label        String                     // human-readable display name
+  phone        String?
+  telegramId   String?                    // filled after first sync
+  firstName    String?
+  lastName     String?
+  username     String?
+  isPremium    Boolean  @default(false)
+  isVerified   Boolean  @default(false)
+  sessionFile  String                     // full path to .session file
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  contacts     User[]
+  chats        Chat[]
+  jobs         Job[]
+  logs         SystemLog[]
+  locationSessions LocationSession[]
+
+  @@index([slug])
+  @@map("accounts")
+}
+
+// ─── Contacts ─────────────────────────────────────────────────────────────────
+model User {
+  id           Int      @id @default(autoincrement())
+  accountId    Int      @map("account_id")
+  telegramId   String   @map("telegram_user_id")
+  firstName    String?
+  lastName     String?
+  username     String?
+  phone        String?
+  isPremium    Boolean  @default(false)
+  isVerified   Boolean  @default(false)
+  isBot        Boolean  @default(false)
+  accessHash   String?
+  messageCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  account      Account  @relation(fields: [accountId], references: [id])
+  messages     Message[] @relation("SenderMessages")
+
+  @@unique([accountId, telegramId])
+  @@index([accountId])
+  @@index([telegramId])
+  @@index([username])
+  @@map("users")
+}
+
+// ─── Chats / Dialogs ──────────────────────────────────────────────────────────
+model Chat {
+  id              Int      @id @default(autoincrement())
+  accountId       Int      @map("account_id")
+  telegramId      String   @map("telegram_chat_id")
+  title           String?
+  username        String?
+  type            String   // PRIVATE, GROUP, SUPERGROUP, CHANNEL, BOT, SAVED_MESSAGES
+  isPublic        Boolean  @default(false)
+  isMember        Boolean  @default(true)
+  isAdmin         Boolean  @default(false)
+  isOwner         Boolean  @default(false)
+  isCreator       Boolean  @default(false)
+  accessHash      String?
+  inviteLink      String?
+  publicUrl       String?
+  membersCount    Int?
+  messageCount    Int      @default(0)
+  photoCount      Int      @default(0)
+  videoCount      Int      @default(0)
+  documentCount   Int      @default(0)
+  audioCount      Int      @default(0)
+  voiceCount      Int      @default(0)
+  gifCount        Int      @default(0)
+  stickerCount    Int      @default(0)
+  linkCount       Int      @default(0)
+  locationCount   Int      @default(0)
+  firstMessageDate DateTime?
+  lastMessageDate  DateTime?
+  lastIndexedAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  account         Account  @relation(fields: [accountId], references: [id])
+  messages        Message[]
+  media           Media[]
+  jobs            Job[]    @relation("SourceJobs")
+  destJobs        Job[]    @relation("DestJobs")
+  locationSessions LocationSession[]
+  statistics      ChatStatistics?
+
+  @@unique([accountId, telegramId])
+  @@index([accountId])
+  @@index([telegramId])
+  @@index([username])
+  @@index([type])
+  @@map("chats")
+}
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+model Message {
+  id                Int      @id @default(autoincrement())
+  telegramMessageId Int      @map("telegram_message_id")
+  chatId            Int      @map("chat_id")
+  senderUserId      Int?     @map("sender_user_id")
+  date              DateTime
+  text              String?
+  messageType       String   @default("TEXT")
+  mediaType         String?
+  fileName          String?
+  mimeType          String?
+  fileSize          Int?
+  hasMedia          Boolean  @default(false)
+  hasLinks          Boolean  @default(false)
+  replyToMessageId  Int?
+  forwardFromChatId String?
+  forwardFromMsgId  Int?
+  forwardFromName   String?
+  isDeleted         Boolean  @default(false)
+  raw               String?
+  createdAt         DateTime @default(now())
+
+  chat              Chat     @relation(fields: [chatId], references: [id])
+  sender            User?    @relation("SenderMessages", fields: [senderUserId], references: [id])
+  media             Media?
+  links             MessageLink[]
+  jobItems          JobItem[]
+
+  @@unique([telegramMessageId, chatId])
+  @@index([chatId])
+  @@index([senderUserId])
+  @@index([date])
+  @@index([messageType])
+  @@index([telegramMessageId])
+  @@map("messages")
+}
+
+// ─── Media ────────────────────────────────────────────────────────────────────
+model Media {
+  id                Int      @id @default(autoincrement())
+  messageId         Int      @unique @map("message_id")
+  chatId            Int      @map("chat_id")
+  telegramMessageId Int      @map("telegram_message_id")
+  mediaType         String
+  fileName          String?
+  mimeType          String?
+  fileSize          Int?
+  downloaded        Boolean  @default(false)
+  localPath         String?
+  telegramFileId    String?
+  telegramMetadata  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  message           Message  @relation(fields: [messageId], references: [id])
+  chat              Chat     @relation(fields: [chatId], references: [id])
+
+  @@index([chatId])
+  @@index([mediaType])
+  @@index([telegramMessageId])
+  @@map("media")
+}
+
+// ─── Message Links ────────────────────────────────────────────────────────────
+model MessageLink {
+  id        Int      @id @default(autoincrement())
+  messageId Int      @map("message_id")
+  url       String
+  domain    String?
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id])
+
+  @@index([messageId])
+  @@index([domain])
+  @@map("message_links")
+}
+
+// ─── Chat Statistics ──────────────────────────────────────────────────────────
+model ChatStatistics {
+  id              Int      @id @default(autoincrement())
+  chatId          Int      @unique @map("chat_id")
+  totalMessages   Int      @default(0)
+  photoCount      Int      @default(0)
+  videoCount      Int      @default(0)
+  documentCount   Int      @default(0)
+  audioCount      Int      @default(0)
+  voiceCount      Int      @default(0)
+  gifCount        Int      @default(0)
+  stickerCount    Int      @default(0)
+  linkCount       Int      @default(0)
+  locationCount   Int      @default(0)
+  firstMessageDate DateTime?
+  lastMessageDate  DateTime?
+  updatedAt       DateTime @updatedAt
+
+  chat            Chat     @relation(fields: [chatId], references: [id])
+
+  @@map("chat_statistics")
+}
+
+// ─── Jobs ─────────────────────────────────────────────────────────────────────
+model Job {
+  id                Int      @id @default(autoincrement())
+  accountId         Int      @map("account_id")
+  type              String
+  status            String   @default("QUEUED")
+  sourceChatId      Int?     @map("source_chat_id")
+  destinationChatId Int?     @map("destination_chat_id")
+  sourceChatRaw     String?
+  destinationChatRaw String?
+  contentFilter     String?
+  dateFrom          DateTime?
+  dateTo            DateTime?
+  formatOption      String?
+  deletionMode      String?
+  totalItems        Int      @default(0)
+  processedItems    Int      @default(0)
+  failedItems       Int      @default(0)
+  checkpoint        String?
+  outputPath        String?
+  error             String?
+  options           String?  // JSON: per-job options (e.g. {"dropAuthor":true})
+  note              String?  // informational result note shown in the UI
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  account           Account  @relation(fields: [accountId], references: [id])
+  sourceChat        Chat?    @relation("SourceJobs", fields: [sourceChatId], references: [id])
+  destChat          Chat?    @relation("DestJobs", fields: [destinationChatId], references: [id])
+  items             JobItem[]
+
+  @@index([accountId])
+  @@index([status])
+  @@index([type])
+  @@map("jobs")
+}
+
+// ─── Job Items ────────────────────────────────────────────────────────────────
+model JobItem {
+  id                Int      @id @default(autoincrement())
+  jobId             Int      @map("job_id")
+  messageId         Int?     @map("message_id")
+  telegramMessageId Int?     @map("telegram_message_id")
+  status            String   @default("PENDING")
+  error             String?
+  processedAt       DateTime?
+
+  job               Job      @relation(fields: [jobId], references: [id])
+  message           Message? @relation(fields: [messageId], references: [id])
+
+  @@index([jobId])
+  @@index([status])
+  @@map("job_items")
+}
+
+// ─── Location ─────────────────────────────────────────────────────────────────
+model LocationSession {
+  id                Int      @id @default(autoincrement())
+  accountId         Int      @map("account_id")
+  deviceId          String
+  destinationChatId Int?     @map("destination_chat_id")
+  destinationChatRaw String?
+  durationSeconds   Int?
+  updateInterval    Int      @default(10)
+  startedAt         DateTime @default(now())
+  endedAt           DateTime?
+  status            String   @default("ACTIVE")
+  deviceToken       String?  @unique @map("device_token")       // lets a phone post GPS points without the admin cookie
+  telegramMessageId Int?     @map("telegram_message_id")        // live-location message sent to destination
+
+  account           Account  @relation(fields: [accountId], references: [id])
+  chat              Chat?    @relation(fields: [destinationChatId], references: [id])
+  points            LocationPoint[]
+
+  @@map("location_sessions")
+}
+
+model LocationPoint {
+  id        Int      @id @default(autoincrement())
+  sessionId Int      @map("session_id")
+  latitude  Float
+  longitude Float
+  accuracy  Float?
+  altitude  Float?
+  speed     Float?
+  heading   Float?
+  recordedAt DateTime @default(now())
+
+  session   LocationSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([recordedAt])
+  @@map("location_points")
+}
+
+// ─── System Logs ──────────────────────────────────────────────────────────────
+model SystemLog {
+  id           Int      @id @default(autoincrement())
+  accountId    Int?     @map("account_id")
+  action       String
+  details      String?
+  sourceChat   String?
+  destChat     String?
+  itemCount    Int?
+  successCount Int?
+  failCount    Int?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  account      Account? @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("system_logs")
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String?
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

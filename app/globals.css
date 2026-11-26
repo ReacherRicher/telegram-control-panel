@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* Tahoma / Segoe UI render Persian well when a message contains it */
+  font-family: -apple-system, 'Segoe UI', system-ui, Tahoma, 'Vazirmatn', sans-serif;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors;
+}
+.sidebar-link.active {
+  @apply bg-sky-600 text-white;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap;
+}
+.btn-primary { @apply btn bg-sky-600 text-white hover:bg-sky-700 focus-visible:ring-sky-500; }
+.btn-secondary { @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus-visible:ring-slate-400; }
+.btn-ghost { @apply btn text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-400; }
+.btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500; }
+.btn-warning { @apply btn bg-amber-500 text-white hover:bg-amber-600 focus-visible:ring-amber-400; }
+.btn-success { @apply btn bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500; }
+.btn-sm { @apply px-2.5 py-1 text-xs; }
+
+.input, .select {
+  @apply w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 disabled:bg-slate-50 disabled:text-slate-500;
+}
+
+.label {
+  @apply block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1;
+}
+.help { @apply text-xs text-slate-400 mt-1; }
+
+.card {
+  @apply bg-white rounded-xl border border-slate-200 p-4 shadow-sm;
+}
+.card-title { @apply font-semibold text-slate-700; }
+.stat-card {
+  @apply card flex flex-col gap-1;
+}
+
+.badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap; }
+.badge-blue { @apply badge bg-sky-100 text-sky-700; }
+.badge-green { @apply badge bg-emerald-100 text-emerald-700; }
+.badge-red { @apply badge bg-red-100 text-red-700; }
+.badge-yellow { @apply badge bg-amber-100 text-amber-800; }
+.badge-gray { @apply badge bg-slate-100 text-slate-600; }
+.badge-purple { @apply badge bg-violet-100 text-violet-700; }
+
+.table-wrap { @apply card p-0 overflow-x-auto; }
+table { @apply w-full text-sm; }
+th { @apply text-left px-3 py-2.5 text-xs font-medium text-slate-500 uppercase tracking-wide border-b border-slate-200 bg-slate-50 whitespace-nowrap; }
+td { @apply px-3 py-2.5 border-b border-slate-100 align-middle; }
+tbody tr:last-child td { @apply border-b-0; }
+tbody tr:hover td { @apply bg-slate-50/70; }
+
+.segmented { @apply inline-flex rounded-md border border-slate-300 bg-white overflow-hidden text-sm; }
+.segmented > button { @apply px-3 py-1.5 text-slate-600 hover:bg-slate-50 border-r border-slate-200 last:border-r-0; }
+.segmented > button[aria-pressed='true'] { @apply bg-sky-600 text-white hover:bg-sky-600; }
+
+@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+.animate-indeterminate { animation: indeterminate 1.4s ease-in-out infinite; }
+@keyframes slide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.animate-in { animation: slide-in .18s ease-out; }
